@@ -5,6 +5,9 @@ import (
 
 	"github.com/gogf/gf/v2/os/gctx"
 
+	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
+	_ "plat_order/internal/logic"
+
 	"plat_order/internal/cmd"
 )
 

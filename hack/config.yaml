@@ -9,5 +9,5 @@ gfcli:
   gen:
     dao:
       - link: "mysql:root:wang111000@tcp(127.0.0.1:3306)/binance_data"
-        tables: "new_user,lh_coin_symbol"
+        tables: "user,lh_coin_symbol"
         jsonCase: "CamelLower"

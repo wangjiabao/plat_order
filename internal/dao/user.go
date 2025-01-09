@@ -8,19 +8,19 @@ import (
 	"plat_order/internal/dao/internal"
 )
 
-// internalNewUserDao is internal type for wrapping internal DAO implements.
-type internalNewUserDao = *internal.NewUserDao
+// internalUserDao is internal type for wrapping internal DAO implements.
+type internalUserDao = *internal.UserDao
 
-// newUserDao is the data access object for table new_user.
+// userDao is the data access object for table user.
 // You can define custom methods on it to extend its functionality as you wish.
-type newUserDao struct {
-	internalNewUserDao
+type userDao struct {
+	internalUserDao
 }
 
 var (
-	// NewUser is globally public accessible object for table new_user operations.
-	NewUser = newUserDao{
-		internal.NewNewUserDao(),
+	// User is globally public accessible object for table user operations.
+	User = userDao{
+		internal.NewUserDao(),
 	}
 )
 

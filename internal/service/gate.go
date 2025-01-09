@@ -10,9 +10,9 @@ import "github.com/gateio/gateapi-go/v6"
 type (
 	IGate interface {
 		// GetGateContract 获取合约账号信息
-		GetGateContract(apiK, apiS string) (gateapi.FuturesAccount, error)
+		GetGateContract(apiK string, apiS string) (gateapi.FuturesAccount, error)
 		// PlaceOrderGate places an order on the Gate.io API with dynamic parameters
-		PlaceOrderGate(apiK, apiS, contract string, size int64, reduceOnly bool, autoSize string) (gateapi.FuturesOrder, error)
+		PlaceOrderGate(apiK string, apiS string, contract string, size int64, reduceOnly bool, autoSize string) (gateapi.FuturesOrder, error)
 	}
 )
 

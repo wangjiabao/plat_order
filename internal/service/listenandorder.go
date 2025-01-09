@@ -7,13 +7,20 @@ package service
 
 import (
 	"context"
+	"plat_order/internal/model/entity"
 )
 
 type (
 	IListenAndOrder interface {
 		Handle(ctx context.Context) (err error)
-		// InsertUser 初始化用户
-		InsertUser(ctx context.Context) (err error)
+		// SetSymbol 更新symbol
+		SetSymbol(ctx context.Context) (err error)
+		// SetTrader 初始化交易员信息
+		SetTrader(ctx context.Context) (err error)
+		// SetUser 初始化用户
+		SetUser(ctx context.Context) (err error)
+		// OrderAtPlat 在平台下单
+		OrderAtPlat(ctx context.Context, doValue *entity.DoValue)
 	}
 )
 

@@ -7,6 +7,7 @@ import (
 	"github.com/gogf/gf/v2/container/gmap"
 	"github.com/gogf/gf/v2/container/gtype"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/grpool"
 	"log"
 	"math"
 	"plat_order/internal/model/entity"
@@ -16,11 +17,17 @@ import (
 
 type (
 	sListenAndOrder struct {
-		Users       *gmap.IntAnyMap
-		UsersMoney  *gmap.IntAnyMap
-		Position    *gmap.StrAnyMap
-		SymbolsMap  *gmap.StrAnyMap
-		TraderMoney *gtype.Float64
+		SymbolsMap *gmap.StrAnyMap
+
+		Users      *gmap.IntAnyMap
+		UsersMoney *gmap.IntAnyMap
+
+		TraderInfo         *Trader
+		TraderMoney        *gtype.Float64
+		TraderPositionSide *gtype.String
+		Position           *gmap.StrAnyMap
+
+		Pool *grpool.Pool
 	}
 )
 
@@ -30,12 +37,22 @@ func init() {
 
 func New() *sListenAndOrder {
 	return &sListenAndOrder{
-		Users:       gmap.NewIntAnyMap(true),
-		UsersMoney:  gmap.NewIntAnyMap(true),
-		Position:    gmap.NewStrAnyMap(true),
-		SymbolsMap:  gmap.NewStrAnyMap(true),
-		TraderMoney: gtype.NewFloat64(),
+		SymbolsMap: gmap.NewStrAnyMap(true), // 交易对信息
+
+		Users:      gmap.NewIntAnyMap(true), // 用户信息
+		UsersMoney: gmap.NewIntAnyMap(true), // 用户保证金
+
+		TraderMoney:        gtype.NewFloat64(), // 交易员保证金
+		TraderPositionSide: gtype.NewString(),
+		Position:           gmap.NewStrAnyMap(true), // 交易员仓位信息
+
+		Pool: grpool.New(), // 全局协程池子
 	}
+}
+
+type Trader struct {
+	apiKey    string
+	apiSecret string
 }
 
 type TraderPosition struct {
@@ -56,8 +73,20 @@ func floatEqual(a, b, epsilon float64) bool {
 	return math.Abs(a-b) <= epsilon
 }
 
-// InsertUser 初始化用户
-func (s *sListenAndOrder) InsertUser(ctx context.Context) (err error) {
+// SetSymbol 更新symbol
+func (s *sListenAndOrder) SetSymbol(ctx context.Context) (err error) {
+
+	return nil
+}
+
+// SetTrader 初始化交易员信息
+func (s *sListenAndOrder) SetTrader(ctx context.Context) (err error) {
+
+	return nil
+}
+
+// SetUser 初始化用户
+func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 	var (
 		users []*entity.User
 	)
@@ -84,10 +113,12 @@ func (s *sListenAndOrder) InsertUser(ctx context.Context) (err error) {
 				s.Users.Set(int(v.Id), v)
 			}
 
+			// 已存在跳过
 			continue
 		}
+
 		// 初始化仓位
-		log.Println("新增用户:", v)
+		log.Println("InsertUser，新增用户:", v)
 		if 1 == v.NeedInit {
 			// 获取保证金
 			var tmpAmount float64
@@ -260,8 +291,36 @@ func (s *sListenAndOrder) InsertUser(ctx context.Context) (err error) {
 			})
 		}
 
+		// 用户加入
 		s.Users.Set(int(v.Id), v)
+
+		// 绑定监听队列 将监听程序加入协程池
+		err = service.OrderQueue().BindUserAndQueue(int(v.Id))
+		if err != nil {
+			return err
+		}
+
+		err = s.Pool.AddWithRecover(
+			ctx,
+			func(ctx context.Context) {
+				service.OrderQueue().ListenQueue(ctx, int(v.Id), s.OrderAtPlat)
+			},
+			func(ctx context.Context, exception error) {
+				log.Println("协程panic了，信息:", v, exception)
+			})
+		if err != nil {
+			log.Println("InsertUser，新增协程，错误:", v)
+			return err
+		}
+
+		// 新增完毕
+
 	}
 
 	return err
+}
+
+// OrderAtPlat 在平台下单
+func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoValue) {
+	log.Println("OrderAtPlat :", doValue)
 }

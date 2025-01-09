@@ -12,7 +12,7 @@ import (
 type (
 	IBinance interface {
 		// GetBinanceInfo 获取账户信息
-		GetBinanceInfo(apiK, apiS string) string
+		GetBinanceInfo(apiK string, apiS string) string
 		RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error)
 	}
 )

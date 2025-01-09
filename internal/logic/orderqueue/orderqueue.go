@@ -1,6 +1,7 @@
 package orderqueue
 
 import (
+	"context"
 	"github.com/gogf/gf/v2/container/gmap"
 	"github.com/gogf/gf/v2/container/gqueue"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -29,7 +30,7 @@ func New() *sOrderQueue {
 func (s *sOrderQueue) BindUserAndQueue(userId int) (err error) {
 	if v, ok := s.safeUserQueue.Get(userId).(*gqueue.Queue); ok {
 		if 0 < v.Len() {
-			return gerror.Newf("bindUserAndQueue，队列len不为0", userId)
+			return gerror.Newf("BindUserAndQueue，队列len不为0，%d", userId)
 		}
 
 		// todo 仍然不是很安全，在这正确可能突然push进来数据
@@ -41,8 +42,8 @@ func (s *sOrderQueue) BindUserAndQueue(userId int) (err error) {
 	return err
 }
 
-// unBindUserAndQueue 解除绑定
-func (s *sOrderQueue) unBindUserAndQueue(userId int) (err error) {
+// UnBindUserAndQueue 解除绑定
+func (s *sOrderQueue) UnBindUserAndQueue(userId int) (err error) {
 	if v, ok := s.safeUserQueue.Get(userId).(*gqueue.Queue); ok {
 		v.Close()
 	}
@@ -65,7 +66,7 @@ func (s *sOrderQueue) PushAllQueue(msg interface{}) {
 }
 
 // ListenQueue 监听队列
-func (s *sOrderQueue) ListenQueue(userId int, do func(err *entity.DoValue)) {
+func (s *sOrderQueue) ListenQueue(ctx context.Context, userId int, do func(context.Context, *entity.DoValue)) {
 	queue, ok := s.safeUserQueue.Get(userId).(*gqueue.Queue)
 	if !ok {
 		log.Println("ListenQueue，无队列信息", userId)
@@ -74,14 +75,17 @@ func (s *sOrderQueue) ListenQueue(userId int, do func(err *entity.DoValue)) {
 
 	for {
 		queueItem := <-queue.C
-		if nil == queueItem {
-			continue
+		if nil == queueItem { // 队列被关闭
+			log.Println("ListenQueue，监听通道被关闭", userId)
+			break
 		}
 
 		// 执行
-		do(&entity.DoValue{
+		do(ctx, &entity.DoValue{
 			UserId: userId,
 			Value:  queueItem,
 		})
 	}
+
+	log.Println("ListenQueue，结束监听", userId)
 }

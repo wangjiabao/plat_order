@@ -6,6 +6,7 @@
 package service
 
 import (
+	"context"
 	"plat_order/internal/model/entity"
 )
 
@@ -13,10 +14,12 @@ type (
 	IOrderQueue interface {
 		// BindUserAndQueue 绑定用户队列
 		BindUserAndQueue(userId int) (err error)
+		// UnBindUserAndQueue 解除绑定
+		UnBindUserAndQueue(userId int) (err error)
 		// PushAllQueue 向所有订单队列推送消息
 		PushAllQueue(msg interface{})
 		// ListenQueue 监听队列
-		ListenQueue(userId int, do func(err *entity.DoValue))
+		ListenQueue(ctx context.Context, userId int, do func(context.Context, *entity.DoValue))
 	}
 )
 

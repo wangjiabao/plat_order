@@ -317,6 +317,8 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 
 	}
 
+	// 减去用户
+
 	return err
 }
 

@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gogf/gf/v2/container/gvar"
+	"github.com/gorilla/websocket"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -28,6 +30,12 @@ func init() {
 func New() *sBinance {
 	return &sBinance{}
 }
+
+const (
+	apiBaseURL   = "https://fapi.binance.com"
+	wsBaseURL    = "wss://fstream.binance.com/ws/"
+	listenKeyURL = "/fapi/v1/listenKey"
+)
 
 // 获取币安服务器时间
 func getBinanceServerTime() int64 {
@@ -227,4 +235,151 @@ func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType str
 	}
 
 	return res, resOrderInfo, nil
+}
+
+// GetBinancePositionInfo 获取账户信息
+func (s *sBinance) GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePosition {
+	// 请求的API地址
+	endpoint := "/fapi/v2/account"
+	baseURL := "https://fapi.binance.com"
+
+	// 获取当前时间戳（使用服务器时间避免时差问题）
+	serverTime := getBinanceServerTime()
+	if serverTime == 0 {
+		return nil
+	}
+	timestamp := strconv.FormatInt(serverTime, 10)
+
+	// 设置请求参数
+	params := url.Values{}
+	params.Set("timestamp", timestamp)
+	params.Set("recvWindow", "5000") // 设置接收窗口
+
+	// 生成签名
+	signature := generateSignature(apiS, params)
+
+	// 将签名添加到请求参数中
+	params.Set("signature", signature)
+
+	// 构建完整的请求URL
+	requestURL := baseURL + endpoint + "?" + params.Encode()
+
+	// 创建请求
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return nil
+	}
+
+	// 添加请求头
+	req.Header.Add("X-MBX-APIKEY", apiK)
+
+	// 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+		return nil
+	}
+
+	// 解析响应
+	var o *entity.BinanceResponse
+	err = json.Unmarshal(body, &o)
+	if err != nil {
+		fmt.Println("Error unmarshalling response:", err)
+		return nil
+	}
+
+	// 返回资产余额
+	return o.Positions
+}
+
+var (
+	ListenKey = gvar.New("", true)
+	Conn      *websocket.Conn // WebSocket connection
+)
+
+// ListenKeyResponse represents the response from Binance API when creating or renewing a ListenKey
+type ListenKeyResponse struct {
+	ListenKey string `json:"listenKey"`
+}
+
+// CreateListenKey creates a new ListenKey for user data stream
+func (s *sBinance) CreateListenKey(apiKey string) error {
+	req, err := http.NewRequest("POST", apiBaseURL+listenKeyURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-MBX-APIKEY", apiKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("API error: %s", string(body))
+	}
+
+	var response *ListenKeyResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return err
+	}
+
+	ListenKey.Set(response.ListenKey)
+	return nil
+}
+
+// RenewListenKey renews the ListenKey for user data stream
+func (s *sBinance) RenewListenKey(apiKey string) error {
+	req, err := http.NewRequest("PUT", apiBaseURL+listenKeyURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-MBX-APIKEY", apiKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("API error: %s", string(body))
+	}
+
+	return nil
+}
+
+// ConnectWebSocket safely connects to the WebSocket and updates conn
+func (s *sBinance) ConnectWebSocket() error {
+	// Close the existing connection if open
+	if Conn != nil {
+		err := Conn.Close()
+		if err != nil {
+			fmt.Println("Failed to close old connection:", err)
+		}
+	}
+
+	// Create a new WebSocket connection
+	wsURL := wsBaseURL + ListenKey.String()
+	var err error
+	Conn, _, err = websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to connect to WebSocket: %v", err)
+	}
+	fmt.Println("WebSocket connection established.")
+	return nil
 }

@@ -12,15 +12,16 @@ import (
 
 type (
 	IListenAndOrder interface {
-		Handle(ctx context.Context) (err error)
 		// SetSymbol 更新symbol
 		SetSymbol(ctx context.Context) (err error)
-		// SetTrader 初始化交易员信息
-		SetTrader(ctx context.Context) (err error)
+		// PullAndSetTraderUserPositionSide 获取并更新持仓方向
+		PullAndSetTraderUserPositionSide(ctx context.Context) (err error)
 		// SetUser 初始化用户
 		SetUser(ctx context.Context) (err error)
 		// OrderAtPlat 在平台下单
 		OrderAtPlat(ctx context.Context, doValue *entity.DoValue)
+		// Run 监控仓位 pulls binance data and orders
+		Run(ctx context.Context)
 	}
 )
 

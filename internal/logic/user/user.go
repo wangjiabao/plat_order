@@ -19,7 +19,7 @@ func New() *sUser {
 	return &sUser{}
 }
 
-func (s *sUser) GetAllTraders(ctx context.Context) (users []*entity.User, err error) {
-	err = g.Model("user").Ctx(ctx).Where("is_open=?", 1).Scan(&users)
+func (s *sUser) GetTradersApiIsOk(ctx context.Context) (users []*entity.User, err error) {
+	err = g.Model("user").Ctx(ctx).Where("api_status=?", 1).Scan(&users)
 	return users, err
 }

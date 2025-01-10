@@ -84,3 +84,44 @@ func (s *sGate) PlaceOrderGate(apiK, apiS, contract string, size int64, reduceOn
 
 	return result, nil
 }
+
+// PlaceBothOrderGate places an order on the Gate.io API with dynamic parameters
+func (s *sGate) PlaceBothOrderGate(apiK, apiS, contract string, size int64, reduceOnly bool, close bool) (gateapi.FuturesOrder, error) {
+	client := gateapi.NewAPIClient(gateapi.NewConfiguration())
+	// uncomment the next line if your are testing against testnet
+	// client.ChangeBasePath("https://fx-api-testnet.gateio.ws/api/v4")
+	ctx := context.WithValue(context.Background(),
+		gateapi.ContextGateAPIV4,
+		gateapi.GateAPIV4{
+			Key:    apiK,
+			Secret: apiS,
+		},
+	)
+
+	order := gateapi.FuturesOrder{
+		Contract: contract,
+		Size:     size,
+		Tif:      "ioc",
+		Price:    "0",
+	}
+
+	if close {
+		order.Close = close
+	}
+
+	// 如果 reduceOnly 为 true，添加到请求数据中
+	if reduceOnly {
+		order.ReduceOnly = reduceOnly
+	}
+
+	result, _, err := client.FuturesApi.CreateFuturesOrder(ctx, "usdt", order)
+
+	if err != nil {
+		var e gateapi.GateAPIError
+		if errors.As(err, &e) {
+			fmt.Println("gate api error: ", e.Error())
+		}
+	}
+
+	return result, nil
+}

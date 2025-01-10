@@ -12,7 +12,7 @@ import (
 
 type (
 	IUser interface {
-		GetAllTraders(ctx context.Context) (users []*entity.User, err error)
+		GetTradersApiIsOk(ctx context.Context) (users []*entity.User, err error)
 	}
 )
 

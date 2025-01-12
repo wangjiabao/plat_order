@@ -241,7 +241,7 @@ func (s *sListenAndOrder) PullAndSetTraderUserPositionSide(ctx context.Context) 
 			var (
 				res bool
 			)
-			err, res = service.Binance().RequestBinancePositionSide(tmpUser.ApiKey, tmpUser.ApiSecret, tmp)
+			err, res = service.Binance().RequestBinancePositionSide(tmp, tmpUser.ApiKey, tmpUser.ApiSecret)
 			if nil != err || !res {
 				log.Println("更新用户持仓模式失败", tmpUser, tmp)
 				return true
@@ -329,7 +329,7 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 			var (
 				res bool
 			)
-			err, res = service.Binance().RequestBinancePositionSide(v.ApiKey, v.ApiSecret, tmp)
+			err, res = service.Binance().RequestBinancePositionSide(tmp, v.ApiKey, v.ApiSecret)
 			if nil != err || !res {
 				log.Println("SetUser，更新用户持仓模式失败", v, err, tmp)
 				continue

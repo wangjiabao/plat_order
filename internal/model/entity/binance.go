@@ -24,6 +24,11 @@ type Asset struct {
 	TotalMarginBalance string `json:"totalMarginBalance"` // 资产余额
 }
 
+// PositionSide 代表单个资产的保证金信息
+type PositionSide struct {
+	DalSidePosition bool `json:"dualSidePosition"` // 资产余额
+}
+
 // BinancePosition 代表单个头寸（持仓）信息
 type BinancePosition struct {
 	Symbol                 string `json:"symbol"`                 // 交易对

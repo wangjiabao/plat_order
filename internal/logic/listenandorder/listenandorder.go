@@ -53,8 +53,8 @@ func New() *sListenAndOrder {
 		OrderMap:          gmap.New(true),
 
 		TraderInfo: &Trader{
-			apiKey:    "vgRfQo3Boiu4sXAyYclAKEGg2u2MrmokleKvZDW90qdKppzwSCF70pe6udxmXxmU",
-			apiSecret: "bLoBCQujP0Yud2uYvHbBl8ykv7lkEcK0Mb0PaaLeA7ApnW13OSBODnGyEpsyXy2T",
+			apiKey:    "",
+			apiSecret: "",
 		},
 		TraderMoney:        gtype.NewFloat64(),      // 交易员保证金
 		TraderPositionSide: gtype.NewString(),       // 交易员持仓方向
@@ -207,6 +207,67 @@ func (s *sListenAndOrder) PullAndSetBaseMoneyNewGuiTuAndUser(ctx context.Context
 func (s *sListenAndOrder) PullAndSetTraderUserPositionSide(ctx context.Context) (err error) {
 	s.TraderPositionSide.Set("ALL")
 	// todo 用户和trader的持仓方向更新
+	var (
+		positionSide string
+	)
+	positionSide = service.Binance().GetBinancePositionSide(s.TraderInfo.apiKey, s.TraderInfo.apiSecret)
+	if 0 > len(positionSide) {
+		log.Println("查询交易员持仓方向失败")
+		return nil
+	}
+
+	if "BOTH" != positionSide && "ALL" != positionSide {
+		log.Println("查询交易员持仓方向失败2")
+		return nil
+	}
+
+	if positionSide != s.TraderPositionSide.Val() {
+		s.TraderPositionSide.Set(positionSide)
+	}
+
+	// 用户
+	s.Users.Iterator(func(k int, v interface{}) bool {
+		tmpUser := v.(*entity.User)
+		if positionSide == s.UsersPositionSide.Get(int(tmpUser.Id)) {
+			return true
+		}
+
+		if "binance" == tmpUser.Plat {
+			tmp := "true"
+			if "BOTH" == positionSide {
+				tmp = "false"
+			}
+
+			var (
+				res bool
+			)
+			err, res = service.Binance().RequestBinancePositionSide(tmpUser.ApiKey, tmpUser.ApiSecret, tmp)
+			if nil != err || !res {
+				log.Println("更新用户持仓模式失败", tmpUser, tmp)
+				return true
+			}
+
+		} else if "gate" == tmpUser.Plat {
+			var dual = true
+			if "BOTH" == positionSide {
+				dual = false
+			}
+
+			dual, err = service.Gate().SetDual(tmpUser.ApiKey, tmpUser.ApiSecret, dual)
+			if nil != err {
+				log.Println("SetUser，更新用户持仓模式失败", v, err)
+				return true
+			}
+
+		} else {
+			log.Println("更新用户持仓模式失败，未知信息", tmpUser)
+			return true
+		}
+
+		s.UsersPositionSide.Set(int(tmpUser.Id), positionSide)
+		log.Println("更新持仓模式成功，用户：", tmpUser)
+		return true
+	})
 
 	return nil
 }
@@ -254,7 +315,46 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 			break
 		}
 
-		// 修改持仓模式 todo
+		if "binance" == v.Plat {
+			tmp := "true"
+			if "BOTH" == s.TraderPositionSide.Val() {
+				tmp = "false"
+			} else if "ALL" == s.TraderPositionSide.Val() {
+				tmp = "true"
+			} else {
+				log.Println("SetUser，更新初始化状态失败，交易员持仓模式未知2")
+				break
+			}
+
+			var (
+				res bool
+			)
+			err, res = service.Binance().RequestBinancePositionSide(v.ApiKey, v.ApiSecret, tmp)
+			if nil != err || !res {
+				log.Println("SetUser，更新用户持仓模式失败", v, err, tmp)
+				continue
+			}
+
+		} else if "gate" == v.Plat {
+			var dual bool
+			if "BOTH" == s.TraderPositionSide.Val() {
+				dual = false
+			} else if "ALL" == s.TraderPositionSide.Val() {
+				dual = true
+			} else {
+				log.Println("SetUser，更新初始化状态失败，交易员持仓模式未知3")
+				break
+			}
+
+			dual, err = service.Gate().SetDual(v.ApiKey, v.ApiSecret, dual)
+			if nil != err {
+				log.Println("SetUser，更新用户持仓模式失败", v, err)
+				continue
+			}
+		} else {
+			log.Println("SetUser，更新用户持仓模式失败，未知信息", v)
+			continue
+		}
 
 		s.UsersPositionSide.Set(int(v.Id), s.TraderPositionSide.Val())
 		if 0 >= len(s.UsersPositionSide.Get(int(v.Id))) {
@@ -659,12 +759,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		return
 	}
 
-	if 2 != s.Users.Get(doValue.UserId).(*entity.User).OpenStatus {
-		log.Println("OrderAtPlat，暂停用户:", user, currentData)
-		// 暂停开新仓
-		return
-	}
-
 	traderMoney := s.TraderMoney.Val()
 	if lessThanOrEqualZero(traderMoney, 1e-7) {
 		log.Println("OrderAtPlat，交易员保证金错误:", user, currentData, traderMoney)
@@ -721,6 +815,20 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		} else {
 			currentAmount = math.Abs(currentData.Oq) * userMoney / traderMoney // 本次开单数量，转换为正数
 			tmpExecutedQty = currentAmount
+
+			// 部分平仓
+			if math.Signbit(currentData.Amount) && math.Signbit(currentData.LastAmount) && !math.Signbit(currentData.Oq) {
+
+			} else if !math.Signbit(currentData.Amount) && !math.Signbit(currentData.LastAmount) && math.Signbit(currentData.Oq) {
+
+			} else {
+				// 穿仓，开新仓，检测能否开仓
+				if 2 != s.Users.Get(doValue.UserId).(*entity.User).OpenStatus {
+					log.Println("OrderAtPlat，暂停用户:", user, currentData)
+					// 暂停开新仓
+					return
+				}
+			}
 
 			// 如果用户此时无仓位，正常应该是和交易员同步的
 			if floatEqual(userPositionAmount, 0, 1e-7) {
@@ -803,6 +911,13 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				quantityFloatGate = -quantityFloatGate
 
 			} else if "BUY" == currentData.Side {
+				// 开新仓，检测能否开仓
+				if 2 != s.Users.Get(doValue.UserId).(*entity.User).OpenStatus {
+					log.Println("OrderAtPlat，暂停用户:", user, currentData)
+					// 暂停开新仓
+					return
+				}
+
 				// 开多
 				currentAmount = currentData.Oq * userMoney / traderMoney // 本次开单数量
 				tmpExecutedQty = currentAmount
@@ -871,6 +986,13 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				tmpExecutedQtyGate = quantityFloatGate
 
 			} else if "SELL" == currentData.Side {
+				// 开新仓，检测能否开仓
+				if 2 != s.Users.Get(doValue.UserId).(*entity.User).OpenStatus {
+					log.Println("OrderAtPlat，暂停用户:", user, currentData)
+					// 暂停开新仓
+					return
+				}
+
 				// 开空
 				currentAmount = currentData.Oq * userMoney / traderMoney // 本次开单数量
 				tmpExecutedQty = currentAmount

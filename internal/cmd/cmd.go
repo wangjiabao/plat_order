@@ -50,11 +50,11 @@ var (
 			gtimer.AddSingleton(ctx, time.Minute*1, handle2)
 
 			lao.PullAndSetBaseMoneyNewGuiTuAndUser(ctx)
-			// 30秒/次，同步持仓信息和持仓方向
+			// 1分钟/次，同步持仓信息和持仓方向
 			handle3 := func(ctx context.Context) {
 				lao.PullAndSetBaseMoneyNewGuiTuAndUser(ctx)
 			}
-			gtimer.AddSingleton(ctx, time.Second*30, handle3)
+			gtimer.AddSingleton(ctx, time.Minute*1, handle3)
 
 			// 30秒/次，更新用户信息 todo
 			handle4 := func(ctx context.Context) {
@@ -63,8 +63,9 @@ var (
 					log.Println("任务错误，设置用户：", err)
 				}
 			}
-			gtimer.AddSingleton(ctx, time.Second*5, handle4)
+			gtimer.AddSingleton(ctx, time.Second*30, handle4)
 
+			// 启动
 			go lao.Run(ctx)
 
 			// 开启http管理服务
@@ -212,7 +213,7 @@ var (
 				//})
 			})
 
-			s.SetPort(8100)
+			s.SetPort(8101)
 			s.Run()
 
 			return nil

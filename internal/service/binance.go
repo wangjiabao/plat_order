@@ -11,8 +11,11 @@ import (
 
 type (
 	IBinance interface {
+		// GetBinancePositionSide 获取账户信息
+		GetBinancePositionSide(apiK string, apiS string) string
 		// GetBinanceInfo 获取账户信息
 		GetBinanceInfo(apiK string, apiS string) string
+		RequestBinancePositionSide(positionSide string, apiKey string, secretKey string) (error, bool)
 		RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error)
 		// GetBinancePositionInfo 获取账户信息
 		GetBinancePositionInfo(apiK string, apiS string) []*entity.BinancePosition

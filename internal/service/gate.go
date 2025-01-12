@@ -15,6 +15,8 @@ type (
 		PlaceOrderGate(apiK string, apiS string, contract string, size int64, reduceOnly bool, autoSize string) (gateapi.FuturesOrder, error)
 		// PlaceBothOrderGate places an order on the Gate.io API with dynamic parameters
 		PlaceBothOrderGate(apiK string, apiS string, contract string, size int64, reduceOnly bool, close bool) (gateapi.FuturesOrder, error)
+		// SetDual setDual
+		SetDual(apiK string, apiS string, dual bool) (bool, error)
 	}
 )
 

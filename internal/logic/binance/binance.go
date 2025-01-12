@@ -81,6 +81,83 @@ func generateSignature(apiS string, params url.Values) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// GetBinancePositionSide 获取账户信息
+func (s *sBinance) GetBinancePositionSide(apiK, apiS string) string {
+	// 请求的API地址
+	endpoint := "/fapi/v1/positionSide/dual"
+	baseURL := "https://fapi.binance.com"
+
+	// 获取当前时间戳（使用服务器时间避免时差问题）
+	serverTime := getBinanceServerTime()
+	if serverTime == 0 {
+		return ""
+	}
+	timestamp := strconv.FormatInt(serverTime, 10)
+
+	// 设置请求参数
+	params := url.Values{}
+	params.Set("timestamp", timestamp)
+	params.Set("recvWindow", "5000") // 设置接收窗口
+
+	// 生成签名
+	signature := generateSignature(apiS, params)
+
+	// 将签名添加到请求参数中
+	params.Set("signature", signature)
+
+	// 构建完整的请求URL
+	requestURL := baseURL + endpoint + "?" + params.Encode()
+
+	// 创建请求
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		log.Println("Error creating request:", err)
+		return ""
+	}
+
+	// 添加请求头
+	req.Header.Add("X-MBX-APIKEY", apiK)
+
+	// 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request:", err)
+		return ""
+	}
+
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
+
+	// 读取响应
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading response:", err)
+		return ""
+	}
+
+	// 解析响应
+	var o *entity.PositionSide
+	err = json.Unmarshal(body, &o)
+	if err != nil {
+		log.Println("Error unmarshalling response:", err)
+		return ""
+	}
+
+	res := ""
+	if o.DalSidePosition {
+		res = "ALL"
+	} else {
+		res = "BOTH"
+	}
+
+	return res
+}
+
 // GetBinanceInfo 获取账户信息
 func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 	// 请求的API地址
@@ -150,6 +227,73 @@ func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 
 	// 返回资产余额
 	return o.TotalMarginBalance
+}
+
+func (s *sBinance) RequestBinancePositionSide(positionSide string, apiKey string, secretKey string) (error, bool) {
+	var (
+		client       *http.Client
+		req          *http.Request
+		resp         *http.Response
+		resOrderInfo *entity.BinanceOrderInfo
+		data         string
+		b            []byte
+		err          error
+		apiUrl       = "https://fapi.binance.com/fapi/v1/positionSide/dual"
+	)
+
+	//log.Println(symbol, side, orderType, positionSide, quantity, apiKey, secretKey)
+	// 时间
+	now := strconv.FormatInt(time.Now().UTC().UnixMilli(), 10)
+	// 拼请求数据
+	data = "dualSidePosition=" + positionSide + "&timestamp=" + now
+
+	// 加密
+	h := hmac.New(sha256.New, []byte(secretKey))
+	h.Write([]byte(data))
+	signature := hex.EncodeToString(h.Sum(nil))
+	// 构造请求
+
+	req, err = http.NewRequest("POST", apiUrl, strings.NewReader(data+"&signature="+signature))
+	if err != nil {
+		return err, false
+	}
+	// 添加头信息
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-MBX-APIKEY", apiKey)
+
+	// 请求执行
+	client = &http.Client{Timeout: 3 * time.Second}
+	resp, err = client.Do(req)
+	if err != nil {
+		return err, false
+	}
+
+	// 结果
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(resp.Body)
+
+	b, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(string(b), err)
+		return err, false
+	}
+
+	err = json.Unmarshal(b, &resOrderInfo)
+	if err != nil {
+		log.Println(string(b), err)
+		return err, false
+	}
+
+	log.Println(string(b))
+	if 200 == resOrderInfo.Code {
+		return nil, true
+	}
+
+	return nil, false
 }
 
 func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error) {
@@ -381,7 +525,7 @@ func (s *sBinance) ConnectWebSocket() error {
 	if err != nil {
 		return gerror.Newf("failed to connect to WebSocket: %v", err)
 	}
-	
+
 	log.Println("WebSocket connection established.")
 	return nil
 }

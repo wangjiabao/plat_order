@@ -79,6 +79,7 @@ func (s *sGate) PlaceOrderGate(apiK, apiS, contract string, size int64, reduceOn
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
 			log.Println("gate api error: ", e.Error())
+			return result, nil
 		}
 	}
 
@@ -120,8 +121,34 @@ func (s *sGate) PlaceBothOrderGate(apiK, apiS, contract string, size int64, redu
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
 			log.Println("gate api error: ", e.Error())
+			return result, nil
 		}
 	}
 
 	return result, nil
+}
+
+// SetDual setDual
+func (s *sGate) SetDual(apiK, apiS string, dual bool) (bool, error) {
+	client := gateapi.NewAPIClient(gateapi.NewConfiguration())
+	// uncomment the next line if your are testing against testnet
+	// client.ChangeBasePath("https://fx-api-testnet.gateio.ws/api/v4")
+	ctx := context.WithValue(context.Background(),
+		gateapi.ContextGateAPIV4,
+		gateapi.GateAPIV4{
+			Key:    apiK,
+			Secret: apiS,
+		},
+	)
+
+	result, _, err := client.FuturesApi.SetDualMode(ctx, "usdt", dual)
+	if err != nil {
+		var e gateapi.GateAPIError
+		if errors.As(err, &e) {
+			log.Println("gate api error: ", e.Error())
+			return false, nil
+		}
+	}
+
+	return result.InDualMode, nil
 }

@@ -12,10 +12,10 @@ import (
 type (
 	IBinance interface {
 		// GetBinanceInfo 获取账户信息
-		GetBinanceInfo(apiK, apiS string) string
+		GetBinanceInfo(apiK string, apiS string) string
 		RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error)
 		// GetBinancePositionInfo 获取账户信息
-		GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePosition
+		GetBinancePositionInfo(apiK string, apiS string) []*entity.BinancePosition
 		// CreateListenKey creates a new ListenKey for user data stream
 		CreateListenKey(apiKey string) error
 		// RenewListenKey renews the ListenKey for user data stream

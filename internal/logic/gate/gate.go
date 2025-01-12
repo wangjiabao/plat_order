@@ -3,8 +3,8 @@ package gate
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/gateio/gateapi-go/v6"
+	"log"
 	"plat_order/internal/service"
 )
 
@@ -37,7 +37,7 @@ func (s *sGate) GetGateContract(apiK, apiS string) (gateapi.FuturesAccount, erro
 	if err != nil {
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
-			fmt.Println("gate api error: ", e.Error())
+			log.Println("gate api error: ", e.Error())
 		}
 	}
 
@@ -78,7 +78,7 @@ func (s *sGate) PlaceOrderGate(apiK, apiS, contract string, size int64, reduceOn
 	if err != nil {
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
-			fmt.Println("gate api error: ", e.Error())
+			log.Println("gate api error: ", e.Error())
 		}
 	}
 
@@ -119,7 +119,7 @@ func (s *sGate) PlaceBothOrderGate(apiK, apiS, contract string, size int64, redu
 	if err != nil {
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
-			fmt.Println("gate api error: ", e.Error())
+			log.Println("gate api error: ", e.Error())
 		}
 	}
 

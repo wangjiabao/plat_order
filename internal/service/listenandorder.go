@@ -14,6 +14,8 @@ type (
 	IListenAndOrder interface {
 		// SetSymbol 更新symbol
 		SetSymbol(ctx context.Context) (err error)
+		// PullAndSetBaseMoneyNewGuiTuAndUser 拉取binance保证金数据
+		PullAndSetBaseMoneyNewGuiTuAndUser(ctx context.Context)
 		// PullAndSetTraderUserPositionSide 获取并更新持仓方向
 		PullAndSetTraderUserPositionSide(ctx context.Context) (err error)
 		// SetUser 初始化用户
@@ -22,6 +24,14 @@ type (
 		OrderAtPlat(ctx context.Context, doValue *entity.DoValue)
 		// Run 监控仓位 pulls binance data and orders
 		Run(ctx context.Context)
+		// GetSystemUserNum get user num
+		GetSystemUserNum(ctx context.Context) map[string]float64
+		// SetSystemUserNum set user num
+		SetSystemUserNum(ctx context.Context, apiKey string, num float64) error
+		// SetUseNewSystem set user num
+		SetUseNewSystem(ctx context.Context, apiKey string, useNewSystem uint64) error
+		// GetSystemUserPositions get user positions
+		GetSystemUserPositions(ctx context.Context, apiKey string) map[string]float64
 	}
 )
 

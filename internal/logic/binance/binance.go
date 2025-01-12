@@ -5,11 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"github.com/gogf/gf/v2/container/gvar"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gorilla/websocket"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"plat_order/internal/model/entity"
@@ -42,7 +43,7 @@ func getBinanceServerTime() int64 {
 	urlTmp := "https://api.binance.com/api/v3/time"
 	resp, err := http.Get(urlTmp)
 	if err != nil {
-		fmt.Println("Error getting server time:", err)
+		log.Println("Error getting server time:", err)
 		return 0
 	}
 
@@ -58,11 +59,11 @@ func getBinanceServerTime() int64 {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
+		log.Println("Error reading response body:", err)
 		return 0
 	}
 	if err := json.Unmarshal(body, &serverTimeResponse); err != nil {
-		fmt.Println("Error unmarshaling server time:", err)
+		log.Println("Error unmarshaling server time:", err)
 		return 0
 	}
 
@@ -110,7 +111,7 @@ func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 	// 创建请求
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		log.Println("Error creating request:", err)
 		return ""
 	}
 
@@ -121,7 +122,7 @@ func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		log.Println("Error sending request:", err)
 		return ""
 	}
 
@@ -135,7 +136,7 @@ func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 	// 读取响应
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response:", err)
+		log.Println("Error reading response:", err)
 		return ""
 	}
 
@@ -143,7 +144,7 @@ func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 	var o *entity.Asset
 	err = json.Unmarshal(body, &o)
 	if err != nil {
-		fmt.Println("Error unmarshalling response:", err)
+		log.Println("Error unmarshalling response:", err)
 		return ""
 	}
 
@@ -164,7 +165,7 @@ func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType str
 		apiUrl       = "https://fapi.binance.com/fapi/v1/order"
 	)
 
-	//fmt.Println(symbol, side, orderType, positionSide, quantity, apiKey, secretKey)
+	//log.Println(symbol, side, orderType, positionSide, quantity, apiKey, secretKey)
 	// 时间
 	now := strconv.FormatInt(time.Now().UTC().UnixMilli(), 10)
 	// 拼请求数据
@@ -195,20 +196,20 @@ func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType str
 	defer func(Body io.ReadCloser) {
 		err = Body.Close()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}(resp.Body)
 
 	b, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(string(b), err)
+		log.Println(string(b), err)
 		return nil, nil, err
 	}
 
 	var o *entity.BinanceOrder
 	err = json.Unmarshal(b, &o)
 	if err != nil {
-		fmt.Println(string(b), err)
+		log.Println(string(b), err)
 		return nil, nil, err
 	}
 
@@ -226,10 +227,10 @@ func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType str
 	}
 
 	if 0 >= res.OrderId {
-		//fmt.Println(string(b))
+		//log.Println(string(b))
 		err = json.Unmarshal(b, &resOrderInfo)
 		if err != nil {
-			fmt.Println(string(b), err)
+			log.Println(string(b), err)
 			return nil, nil, err
 		}
 	}
@@ -267,7 +268,7 @@ func (s *sBinance) GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePo
 	// 创建请求
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		log.Println("Error creating request:", err)
 		return nil
 	}
 
@@ -278,7 +279,7 @@ func (s *sBinance) GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePo
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		log.Println("Error sending request:", err)
 		return nil
 	}
 	defer resp.Body.Close()
@@ -286,7 +287,7 @@ func (s *sBinance) GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePo
 	// 读取响应
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response:", err)
+		log.Println("Error reading response:", err)
 		return nil
 	}
 
@@ -294,7 +295,7 @@ func (s *sBinance) GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePo
 	var o *entity.BinanceResponse
 	err = json.Unmarshal(body, &o)
 	if err != nil {
-		fmt.Println("Error unmarshalling response:", err)
+		log.Println("Error unmarshalling response:", err)
 		return nil
 	}
 
@@ -328,7 +329,7 @@ func (s *sBinance) CreateListenKey(apiKey string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s", string(body))
+		return gerror.Newf("API error: %s", string(body))
 	}
 
 	var response *ListenKeyResponse
@@ -357,7 +358,7 @@ func (s *sBinance) RenewListenKey(apiKey string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("API error: %s", string(body))
+		return gerror.Newf("API error: %s", string(body))
 	}
 
 	return nil
@@ -369,7 +370,7 @@ func (s *sBinance) ConnectWebSocket() error {
 	if Conn != nil {
 		err := Conn.Close()
 		if err != nil {
-			fmt.Println("Failed to close old connection:", err)
+			log.Println("Failed to close old connection:", err)
 		}
 	}
 
@@ -378,8 +379,9 @@ func (s *sBinance) ConnectWebSocket() error {
 	var err error
 	Conn, _, err = websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
-		return fmt.Errorf("failed to connect to WebSocket: %v", err)
+		return gerror.Newf("failed to connect to WebSocket: %v", err)
 	}
-	fmt.Println("WebSocket connection established.")
+	
+	log.Println("WebSocket connection established.")
 	return nil
 }

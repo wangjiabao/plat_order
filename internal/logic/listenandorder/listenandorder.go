@@ -255,7 +255,7 @@ func (s *sListenAndOrder) PullAndSetTraderUserPositionSide(ctx context.Context) 
 
 			dual, err = service.Gate().SetDual(tmpUser.ApiKey, tmpUser.ApiSecret, dual)
 			if nil != err {
-				log.Println("SetUser，更新用户持仓模式失败", v, err)
+				log.Println("更新用户持仓模式失败", v, err)
 				return true
 			}
 

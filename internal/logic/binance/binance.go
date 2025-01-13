@@ -288,7 +288,7 @@ func (s *sBinance) RequestBinancePositionSide(positionSide string, apiKey string
 		return err, false
 	}
 
-	//log.Println(string(b))
+	log.Println(string(b))
 	if 200 == resOrderInfo.Code {
 		return nil, true
 	}

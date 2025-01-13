@@ -162,55 +162,55 @@ var (
 				})
 
 				// 用户设置仓位
-				//group.POST("/user/update/position", func(r *ghttp.Request) {
-				//	var (
-				//		parseErr     error
-				//		num          float64
-				//		system       uint64
-				//		allCloseGate uint64
-				//	)
-				//	num, parseErr = strconv.ParseFloat(r.PostFormValue("num"), 64)
-				//	if nil != parseErr || 0 >= num {
-				//		r.Response.WriteJson(g.Map{
-				//			"code": -1,
-				//		})
-				//
-				//		return
-				//	}
-				//
-				//	system, parseErr = strconv.ParseUint(r.PostFormValue("system"), 10, 64)
-				//	if nil != parseErr || 0 > system {
-				//		r.Response.WriteJson(g.Map{
-				//			"code": -1,
-				//		})
-				//
-				//		return
-				//	}
-				//
-				//	allCloseGate, parseErr = strconv.ParseUint(r.PostFormValue("allCloseGate"), 10, 64)
-				//	if nil != parseErr || 0 > allCloseGate {
-				//		r.Response.WriteJson(g.Map{
-				//			"code": -1,
-				//		})
-				//
-				//		return
-				//	}
-				//
-				//	r.Response.WriteJson(g.Map{
-				//		"code": lao.SetSystemUserPosition(
-				//			ctx,
-				//			system,
-				//			allCloseGate,
-				//			r.PostFormValue("apiKey"),
-				//			r.PostFormValue("symbol"),
-				//			r.PostFormValue("side"),
-				//			r.PostFormValue("positionSide"),
-				//			num,
-				//		),
-				//	})
-				//
-				//	return
-				//})
+				group.POST("/user/update/position", func(r *ghttp.Request) {
+					var (
+						parseErr     error
+						num          float64
+						system       uint64
+						allCloseGate uint64
+					)
+					num, parseErr = strconv.ParseFloat(r.PostFormValue("num"), 64)
+					if nil != parseErr || 0 >= num {
+						r.Response.WriteJson(g.Map{
+							"code": -1,
+						})
+
+						return
+					}
+
+					system, parseErr = strconv.ParseUint(r.PostFormValue("system"), 10, 64)
+					if nil != parseErr || 0 > system {
+						r.Response.WriteJson(g.Map{
+							"code": -1,
+						})
+
+						return
+					}
+
+					allCloseGate, parseErr = strconv.ParseUint(r.PostFormValue("allCloseGate"), 10, 64)
+					if nil != parseErr || 0 > allCloseGate {
+						r.Response.WriteJson(g.Map{
+							"code": -1,
+						})
+
+						return
+					}
+
+					r.Response.WriteJson(g.Map{
+						"code": lao.SetSystemUserPosition(
+							ctx,
+							system,
+							allCloseGate,
+							r.PostFormValue("apiKey"),
+							r.PostFormValue("symbol"),
+							r.PostFormValue("side"),
+							r.PostFormValue("positionSide"),
+							num,
+						),
+					})
+
+					return
+				})
 			})
 
 			s.SetPort(8100)

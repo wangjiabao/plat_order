@@ -32,6 +32,8 @@ type (
 		SetUseNewSystem(ctx context.Context, apiKey string, useNewSystem uint64) error
 		// GetSystemUserPositions get user positions
 		GetSystemUserPositions(ctx context.Context, apiKey string) map[string]float64
+		// SetSystemUserPosition set user positions
+		SetSystemUserPosition(ctx context.Context, system uint64, allCloseGate uint64, apiKey string, symbol string, side string, positionSide string, num float64) uint64
 	}
 )
 

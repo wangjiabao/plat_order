@@ -669,10 +669,11 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 			continue
 		}
 
+		tmpId := int(v.Id)
 		err = s.Pool.AddWithRecover(
 			ctx,
 			func(ctx context.Context) {
-				service.OrderQueue().ListenQueue(ctx, int(v.Id), s.OrderAtPlat)
+				service.OrderQueue().ListenQueue(ctx, tmpId, s.OrderAtPlat)
 			},
 			func(ctx context.Context, exception error) {
 				log.Println("协程panic了，信息:", v, exception)

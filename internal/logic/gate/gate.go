@@ -38,6 +38,7 @@ func (s *sGate) GetGateContract(apiK, apiS string) (gateapi.FuturesAccount, erro
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
 			log.Println("gate api error: ", e.Error())
+			return result, err
 		}
 	}
 
@@ -79,7 +80,7 @@ func (s *sGate) PlaceOrderGate(apiK, apiS, contract string, size int64, reduceOn
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
 			log.Println("gate api error: ", e.Error())
-			return result, nil
+			return result, err
 		}
 	}
 
@@ -121,7 +122,7 @@ func (s *sGate) PlaceBothOrderGate(apiK, apiS, contract string, size int64, redu
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
 			log.Println("gate api error: ", e.Error())
-			return result, nil
+			return result, err
 		}
 	}
 
@@ -145,8 +146,12 @@ func (s *sGate) SetDual(apiK, apiS string, dual bool) (bool, error) {
 	if err != nil {
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {
+			if "NO_CHANGE" == e.Label {
+				return dual, nil
+			}
+
 			log.Println("gate api error: ", e.Error())
-			return false, nil
+			return false, err
 		}
 	}
 

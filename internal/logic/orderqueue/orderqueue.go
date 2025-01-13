@@ -39,6 +39,7 @@ func (s *sOrderQueue) BindUserAndQueue(userId int) (err error) {
 
 	q := gqueue.New()
 	s.safeUserQueue.Set(userId, q)
+	log.Println("新增协程：", userId)
 	return err
 }
 
@@ -72,6 +73,7 @@ func (s *sOrderQueue) ListenQueue(ctx context.Context, userId int, do func(conte
 		log.Println("ListenQueue，无队列信息", userId)
 		return
 	}
+	log.Println("开启协程：", userId, queue)
 
 	for {
 		queueItem := <-queue.C

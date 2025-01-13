@@ -842,7 +842,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			}
 
 			if 0 < s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
-				log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
+				//log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
 
 				// 转化为张数=币的数量/每张币的数量
 				tmpQtyGate := currentAmount / s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier
@@ -924,7 +924,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				tmpExecutedQty = currentAmount
 
 				if 0 < s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
-					log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
+					//log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
 
 					// 转化为张数=币的数量/每张币的数量
 					tmpQtyGate := currentAmount / s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier
@@ -999,7 +999,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				tmpExecutedQty = currentAmount
 
 				if 0 < s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
-					log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
+					//log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
 
 					// 转化为张数=币的数量/每张币的数量
 					tmpQtyGate := currentAmount / s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier

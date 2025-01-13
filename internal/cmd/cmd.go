@@ -65,6 +65,12 @@ var (
 			}
 			gtimer.AddSingleton(ctx, time.Second*30, handle4)
 
+			// 5分钟/次，更新用户信息 todo
+			handle5 := func(ctx context.Context) {
+				lao.HandleBothPositions(ctx)
+			}
+			gtimer.AddSingleton(ctx, time.Minute*5, handle5)
+
 			// 启动
 			go lao.Run(ctx)
 

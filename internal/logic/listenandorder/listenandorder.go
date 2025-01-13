@@ -843,6 +843,143 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 	return nil
 }
 
+// HandleBothPositions 处理平仓
+func (s *sListenAndOrder) HandleBothPositions(ctx context.Context) {
+	if "BOTH" != s.TraderPositionSide.Val() {
+		return
+	}
+
+	tmpPosition := s.Position.Get("ETHUSDTBOTH")
+	if nil == tmpPosition {
+		return
+	}
+
+	// 仓位有不处理
+	if !floatEqual(tmpPosition.(*TraderPosition).PositionAmount, 0, 1e-7) {
+		return
+	}
+
+	s.Users.Iterator(func(k int, v interface{}) bool {
+		tmpUser := v.(*entity.User)
+		strUserId := strconv.FormatUint(uint64(tmpUser.Id), 10)
+
+		if !s.OrderMap.Contains("ETHUSDT&BOTH&" + strUserId) {
+			return true
+		}
+
+		//// 当检测到余额不为0，不执行
+		//tmp := s.OrderMap.Get("ETHUSDT&BOTH&" + strUserId).(float64)
+		//if !floatEqual(tmpPosition.(*TraderPosition).PositionAmount, 0, 1e-7) {
+		//	return true
+		//}
+
+		var (
+			err error
+		)
+		if "binance" == tmpUser.Plat {
+			var (
+				binancePosition []*entity.BinancePosition
+			)
+
+			binancePosition = service.Binance().GetBinancePositionInfo(tmpUser.ApiKey, tmpUser.ApiSecret)
+			if nil == binancePosition {
+				log.Println("强平仓，错误查询仓位，binance")
+				return true
+			}
+
+			for _, position := range binancePosition {
+				//log.Println("初始化：", position.Symbol, position.PositionAmt, position.PositionSide)
+				if "BOTH" != position.PositionSide {
+					continue
+				}
+
+				if "ETHUSDT" != position.Symbol {
+					continue
+				}
+
+				// 新增
+				var (
+					currentAmount float64
+				)
+				currentAmount, err = strconv.ParseFloat(position.PositionAmt, 64)
+				if nil != err {
+					log.Println("强平仓，解析金额出错，信息", position, currentAmount)
+				}
+
+				if floatEqual(currentAmount, 0, 1e-7) {
+					continue
+				}
+
+				// 下单，不用计算数量，新仓位
+				var (
+					binanceOrderRes *entity.BinanceOrder
+					orderInfoRes    *entity.BinanceOrderInfo
+				)
+
+				side := "SELL"
+				if math.Signbit(currentAmount) {
+					side = "BUY"
+				}
+
+				// 请求下单
+				binanceOrderRes, orderInfoRes, err = service.Binance().RequestBinanceOrder(position.Symbol, side, "MARKET", position.PositionSide, position.PositionAmt, tmpUser.ApiKey, tmpUser.ApiSecret, true)
+				if nil != err {
+					log.Println("强平仓，下单错误:", tmpUser, binanceOrderRes, orderInfoRes, err, position)
+					continue
+				}
+
+				// 下单异常
+				if 0 >= binanceOrderRes.OrderId {
+					log.Println("强平仓，下单错误:", tmpUser, binanceOrderRes, orderInfoRes, err, position)
+					continue
+				}
+
+				s.OrderMap.Set(position.Symbol+"&"+position.PositionSide+"&"+strUserId, 0)
+				log.Println("强平仓，仓位拉取binance：", position.Symbol+"&"+position.PositionSide+"&"+strUserId, currentAmount)
+			}
+		} else if "gate" == tmpUser.Plat {
+			var (
+				gatePositions []gateapi.Position
+			)
+			gatePositions, err = service.Gate().GetListPositions(tmpUser.ApiKey, tmpUser.ApiSecret)
+			if nil != err {
+				log.Println("强平仓，错误查询仓位，gate", err)
+				return true
+			}
+			for _, position := range gatePositions {
+				if "ETH_USDT" != position.Contract {
+					continue
+				}
+
+				if "single" != position.Mode {
+					continue
+				}
+
+				if floatEqual(float64(position.Size), 0, 1e-7) {
+					continue
+				}
+
+				var (
+					gateRes gateapi.FuturesOrder
+				)
+
+				gateRes, err = service.Gate().PlaceBothOrderGate(tmpUser.ApiKey, tmpUser.ApiSecret, "ETH_USDT", 0, true, true)
+				if nil != err || 0 >= gateRes.Id {
+					log.Println("强平仓，Gate下单:", tmpUser, gateRes, err, position)
+					continue
+				}
+
+				s.OrderMap.Set("ETHUSDT&BOTH&"+strUserId, 0)
+				log.Println("强平仓，仓位拉取gate：", "ETHUSDT&BOTH&"+strUserId, position.Size)
+
+			}
+		}
+
+		return true
+	})
+
+}
+
 // OrderAtPlat 在平台下单
 func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoValue) {
 	//log.Println("OrderAtPlat :", doValue)

@@ -20,6 +20,8 @@ type (
 		PullAndSetTraderUserPositionSide(ctx context.Context) (err error)
 		// SetUser 初始化用户
 		SetUser(ctx context.Context) (err error)
+		// HandleBothPositions 处理平仓
+		HandleBothPositions(ctx context.Context)
 		// OrderAtPlat 在平台下单
 		OrderAtPlat(ctx context.Context, doValue *entity.DoValue)
 		// Run 监控仓位 pulls binance data and orders

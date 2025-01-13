@@ -765,25 +765,25 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 		s.Users.Set(int(v.Id), v)
 
 		// 绑定监听队列 将监听程序加入协程池
-		//err = service.OrderQueue().BindUserAndQueue(int(v.Id))
-		//if err != nil {
-		//	log.Println("SetUser，绑定新增协程，错误:", v, err)
-		//	continue
-		//}
-		//
-		//tmpId := int(v.Id)
-		//err = s.Pool.AddWithRecover(
-		//	ctx,
-		//	func(ctx context.Context) {
-		//		service.OrderQueue().ListenQueue(ctx, tmpId, s.OrderAtPlat)
-		//	},
-		//	func(ctx context.Context, exception error) {
-		//		log.Println("协程panic了，信息:", v, exception)
-		//	})
-		//if err != nil {
-		//	log.Println("SetUser，新增协程，错误:", v, err)
-		//	continue
-		//}
+		err = service.OrderQueue().BindUserAndQueue(int(v.Id))
+		if err != nil {
+			log.Println("SetUser，绑定新增协程，错误:", v, err)
+			continue
+		}
+
+		tmpId := int(v.Id)
+		err = s.Pool.AddWithRecover(
+			ctx,
+			func(ctx context.Context) {
+				service.OrderQueue().ListenQueue(ctx, tmpId, s.OrderAtPlat)
+			},
+			func(ctx context.Context, exception error) {
+				log.Println("协程panic了，信息:", v, exception)
+			})
+		if err != nil {
+			log.Println("SetUser，新增协程，错误:", v, err)
+			continue
+		}
 
 		// 新增完毕
 	}
@@ -888,7 +888,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		closePosition      string
 		quantityInt64Gate  int64
 		quantityFloatGate  float64
-		tmpExecutedQty     float64 // 结果有正负both 其他持仓仓位模式正
 		tmpExecutedQtyGate float64 // 结果有正负both 其他持仓仓位模式正
 		closeGate          bool
 		reduceOnlyBinance  bool
@@ -902,7 +901,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		// 完全平常
 		if "CLOSE" == currentData.Status {
 			currentAmount = math.Abs(userPositionAmount) // 本次开单数量，转换为正数
-			tmpExecutedQty = -userPositionAmount         // 取反
 
 			// 认为是0
 			if lessThanOrEqualZero(currentAmount, 1e-7) {
@@ -920,7 +918,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			reduceOnlyBinance = true
 		} else {
 			currentAmount = math.Abs(currentData.Oq) * userMoney / traderMoney // 本次开单数量，转换为正数
-			tmpExecutedQty = currentAmount
 
 			// 部分平仓
 			if math.Signbit(currentData.Amount) && math.Signbit(currentData.LastAmount) && !math.Signbit(currentData.Oq) {
@@ -959,9 +956,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			if "SELL" == currentData.Side {
 				quantityInt64Gate = -quantityInt64Gate
 				quantityFloatGate = -quantityFloatGate
-
-				tmpExecutedQty = -currentAmount
-
 			}
 
 			tmpExecutedQtyGate = quantityFloatGate
@@ -980,7 +974,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			}
 
 			currentAmount = userPositionAmount
-			tmpExecutedQty = currentAmount
 
 			reduceOnly = true
 			closePosition = "close_long"
@@ -1003,7 +996,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				}
 
 				currentAmount = userPositionAmount * (currentData.Oq) / currentData.LastAmount
-				tmpExecutedQty = currentAmount
 
 				reduceOnly = true
 				closePosition = "close_long"
@@ -1026,7 +1018,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 
 				// 开多
 				currentAmount = currentData.Oq * userMoney / traderMoney // 本次开单数量
-				tmpExecutedQty = currentAmount
 
 				if 0 < s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
 					//log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
@@ -1058,7 +1049,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			}
 
 			currentAmount = userPositionAmount
-			tmpExecutedQty = currentAmount
 
 			reduceOnly = true
 			closePosition = "close_short"
@@ -1081,7 +1071,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				}
 
 				currentAmount = userPositionAmount * (currentData.Oq) / currentData.LastAmount
-				tmpExecutedQty = currentAmount
 
 				reduceOnly = true
 				closePosition = "close_short"
@@ -1101,7 +1090,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 
 				// 开空
 				currentAmount = currentData.Oq * userMoney / traderMoney // 本次开单数量
-				tmpExecutedQty = currentAmount
 
 				if 0 < s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
 					//log.Println("OrderAtPlat，交易对信息错误:", user, currentData, s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol))
@@ -1263,6 +1251,12 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		if 0 >= binanceOrderRes.OrderId {
 			log.Println(orderInfoRes)
 			return // 返回
+		}
+
+		var tmpExecutedQty float64 // 结果有正负both 其他持仓仓位模式正
+		tmpExecutedQty = quantityFloat
+		if "BOTH" == positionSide && "SELL" == side {
+			tmpExecutedQty = -tmpExecutedQty
 		}
 
 		// 不存在新增，这里只能是开仓

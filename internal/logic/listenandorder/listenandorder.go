@@ -714,13 +714,13 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 					continue
 				}
 				for _, position := range gatePositions {
-					if len(position.Contract) <= 4 {
+					if len(position.Contract) <= 5 {
 						continue
 					}
 
 					positionSide := "BOTH"
 					var tmpSymbol string
-					tmpSymbolKey := position.Contract[:len(position.Contract)-4]
+					tmpSymbolKey := position.Contract[:len(position.Contract)-5]
 					tmpSymbol = tmpSymbolKey + "USDT"
 					if "single" == position.Mode {
 						tmpSymbolKey += "USDTBOTH"

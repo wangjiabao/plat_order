@@ -10,13 +10,15 @@ import "github.com/gateio/gateapi-go/v6"
 type (
 	IGate interface {
 		// GetGateContract 获取合约账号信息
-		GetGateContract(apiK, apiS string) (gateapi.FuturesAccount, error)
+		GetGateContract(apiK string, apiS string) (gateapi.FuturesAccount, error)
+		// GetListPositions 获取合约账号信息
+		GetListPositions(apiK string, apiS string) ([]gateapi.Position, error)
 		// PlaceOrderGate places an order on the Gate.io API with dynamic parameters
-		PlaceOrderGate(apiK, apiS, contract string, size int64, reduceOnly bool, autoSize string) (gateapi.FuturesOrder, error)
+		PlaceOrderGate(apiK string, apiS string, contract string, size int64, reduceOnly bool, autoSize string) (gateapi.FuturesOrder, error)
 		// PlaceBothOrderGate places an order on the Gate.io API with dynamic parameters
-		PlaceBothOrderGate(apiK, apiS, contract string, size int64, reduceOnly bool, close bool) (gateapi.FuturesOrder, error)
+		PlaceBothOrderGate(apiK string, apiS string, contract string, size int64, reduceOnly bool, close bool) (gateapi.FuturesOrder, error)
 		// SetDual setDual
-		SetDual(apiK, apiS string, dual bool) (bool, error)
+		SetDual(apiK string, apiS string, dual bool) (bool, error)
 	}
 )
 

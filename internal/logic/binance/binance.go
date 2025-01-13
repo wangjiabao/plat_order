@@ -296,7 +296,7 @@ func (s *sBinance) RequestBinancePositionSide(positionSide string, apiKey string
 	return nil, false
 }
 
-func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error) {
+func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string, reduceOnly bool) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error) {
 	var (
 		client       *http.Client
 		req          *http.Request
@@ -313,7 +313,11 @@ func (s *sBinance) RequestBinanceOrder(symbol string, side string, orderType str
 	// 时间
 	now := strconv.FormatInt(time.Now().UTC().UnixMilli(), 10)
 	// 拼请求数据
-	data = "symbol=" + symbol + "&side=" + side + "&type=" + orderType + "&positionSide=" + positionSide + "&newOrderRespType=" + "RESULT" + "&quantity=" + quantity + "&timestamp=" + now
+	if reduceOnly {
+		data = "symbol=" + symbol + "&side=" + side + "&type=" + orderType + "&positionSide=" + positionSide + "&newOrderRespType=" + "RESULT" + "&reduceOnly=true&quantity=" + quantity + "&timestamp=" + now
+	} else {
+		data = "symbol=" + symbol + "&side=" + side + "&type=" + orderType + "&positionSide=" + positionSide + "&newOrderRespType=" + "RESULT" + "&quantity=" + quantity + "&timestamp=" + now
+	}
 
 	// 加密
 	h := hmac.New(sha256.New, []byte(secretKey))

@@ -3,6 +3,7 @@ package gate
 import (
 	"context"
 	"errors"
+	"github.com/antihax/optional"
 	"github.com/gateio/gateapi-go/v6"
 	"log"
 	"plat_order/internal/service"
@@ -34,6 +35,34 @@ func (s *sGate) GetGateContract(apiK, apiS string) (gateapi.FuturesAccount, erro
 	)
 
 	result, _, err := client.FuturesApi.ListFuturesAccounts(ctx, "usdt")
+	if err != nil {
+		var e gateapi.GateAPIError
+		if errors.As(err, &e) {
+			log.Println("gate api error: ", e.Error())
+			return result, err
+		}
+	}
+
+	return result, nil
+}
+
+// GetListPositions 获取合约账号信息
+func (s *sGate) GetListPositions(apiK, apiS string) ([]gateapi.Position, error) {
+	client := gateapi.NewAPIClient(gateapi.NewConfiguration())
+	// uncomment the next line if your are testing against testnet
+	// client.ChangeBasePath("https://fx-api-testnet.gateio.ws/api/v4")
+	ctx := context.WithValue(context.Background(),
+		gateapi.ContextGateAPIV4,
+		gateapi.GateAPIV4{
+			Key:    apiK,
+			Secret: apiS,
+		},
+	)
+
+	result, _, err := client.FuturesApi.ListPositions(ctx, "usdt", &gateapi.ListPositionsOpts{
+		Holding: optional.NewBool(true),
+	})
+
 	if err != nil {
 		var e gateapi.GateAPIError
 		if errors.As(err, &e) {

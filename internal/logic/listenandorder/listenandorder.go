@@ -2073,8 +2073,8 @@ func (s *sListenAndOrder) SetSystemUserPosition(ctx context.Context, system uint
 			}
 		}
 	} else if "gate" == vTmpUserMap.Plat {
-		if 0 >= s.OrderMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
-			log.Println("自定义下单，代币信息错误，信息", s.OrderMap.Get(symbolMapKey).(*entity.LhCoinSymbol), apiKey, symbol, side, positionSide, num)
+		if 0 >= s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
+			log.Println("自定义下单，代币信息错误，信息", s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol), apiKey, symbol, side, positionSide, num)
 			return 0
 		}
 
@@ -2098,7 +2098,7 @@ func (s *sListenAndOrder) SetSystemUserPosition(ctx context.Context, system uint
 				tmpQty = num
 
 				// 转化为张数=币的数量/每张币的数量
-				tmpQtyOkx := tmpQty / s.OrderMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier
+				tmpQtyOkx := tmpQty / s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier
 				// 按张的精度转化，
 				quantityInt64 = int64(math.Round(tmpQtyOkx))
 				quantityFloat = float64(quantityInt64)

@@ -746,13 +746,14 @@ func (s *sListenAndOrder) SetUser(ctx context.Context) (err error) {
 							continue
 						}
 
+						tmpQty := float64(position.Size)
 						// 以下内容，当系统无此仓位时
 						if "BOTH" == positionSide {
-							s.OrderMap.Set(tmpSymbol+"&"+positionSide+"&"+strUserId, position.Size)
-							log.Println("初始化，仓位拉取gate：", tmpSymbol+"&"+positionSide+"&"+strUserId, position.Size)
+							s.OrderMap.Set(tmpSymbol+"&"+positionSide+"&"+strUserId, tmpQty)
+							log.Println("初始化，仓位拉取gate：", tmpSymbol+"&"+positionSide+"&"+strUserId, position.Size, tmpQty)
 						} else {
-							s.OrderMap.Set(tmpSymbol+"&"+positionSide+"&"+strUserId, math.Abs(float64(position.Size)))
-							log.Println("初始化，仓位拉取gate：", tmpSymbol+"&"+positionSide+"&"+strUserId, position.Size, math.Abs(float64(position.Size)))
+							s.OrderMap.Set(tmpSymbol+"&"+positionSide+"&"+strUserId, math.Abs(tmpQty))
+							log.Println("初始化，仓位拉取gate：", tmpSymbol+"&"+positionSide+"&"+strUserId, position.Size, tmpQty, math.Abs(tmpQty))
 						}
 					}
 
@@ -934,7 +935,7 @@ func (s *sListenAndOrder) HandleBothPositions(ctx context.Context) {
 					continue
 				}
 
-				s.OrderMap.Set(position.Symbol+"&"+position.PositionSide+"&"+strUserId, 0)
+				s.OrderMap.Set(position.Symbol+"&"+position.PositionSide+"&"+strUserId, float64(0))
 				log.Println("强平仓，仓位拉取binance：", position.Symbol+"&"+position.PositionSide+"&"+strUserId, currentAmount)
 			}
 		} else if "gate" == tmpUser.Plat {
@@ -969,7 +970,7 @@ func (s *sListenAndOrder) HandleBothPositions(ctx context.Context) {
 					continue
 				}
 
-				s.OrderMap.Set("ETHUSDT&BOTH&"+strUserId, 0)
+				s.OrderMap.Set("ETHUSDT&BOTH&"+strUserId, float64(0))
 				log.Println("强平仓，仓位拉取gate：", "ETHUSDT&BOTH&"+strUserId, position.Size)
 
 			}

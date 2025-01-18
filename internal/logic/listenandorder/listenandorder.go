@@ -923,7 +923,7 @@ func (s *sListenAndOrder) HandleBothPositions(ctx context.Context) {
 				}
 
 				// 请求下单
-				binanceOrderRes, orderInfoRes, err = service.Binance().RequestBinanceOrder(position.Symbol, side, "MARKET", position.PositionSide, position.PositionAmt, tmpUser.ApiKey, tmpUser.ApiSecret, true)
+				binanceOrderRes, orderInfoRes, err = service.Binance().RequestBinanceOrder(position.Symbol, side, "MARKET", position.PositionSide, strconv.FormatFloat(math.Abs(currentAmount), 'f', -1, 64), tmpUser.ApiKey, tmpUser.ApiSecret, true)
 				if nil != err {
 					log.Println("强平仓，下单错误:", tmpUser, binanceOrderRes, orderInfoRes, err, position)
 					continue

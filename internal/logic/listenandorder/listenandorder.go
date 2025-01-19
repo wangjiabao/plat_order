@@ -1021,6 +1021,8 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 	}
 
 	var (
+		closeStatus        = currentData.Status
+		bothPartClose      bool
 		currentAmount      float64
 		reduceOnly         bool
 		closePosition      string
@@ -1037,7 +1039,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		}
 
 		// 完全平常
-		if "CLOSE" == currentData.Status {
+		if "CLOSE" == closeStatus {
 			currentAmount = math.Abs(userPositionAmount) // 本次开单数量，转换为正数
 
 			// 认为是0
@@ -1059,9 +1061,9 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 
 			// 部分平仓
 			if math.Signbit(currentData.Amount) && math.Signbit(currentData.LastAmount) && !math.Signbit(currentData.Oq) {
-
+				bothPartClose = true
 			} else if !math.Signbit(currentData.Amount) && !math.Signbit(currentData.LastAmount) && math.Signbit(currentData.Oq) {
-
+				bothPartClose = true
 			} else {
 				// 穿仓，开新仓，检测能否开仓
 				if 2 != s.Users.Get(doValue.UserId).(*entity.User).OpenStatus {
@@ -1071,14 +1073,9 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				}
 			}
 
-			// 如果用户此时无仓位，正常应该是和交易员同步的
-			if floatEqual(userPositionAmount, 0, 1e-7) {
-				// 交易员反向交易仍未穿仓，部分平仓，则选择不开
-				if math.Signbit(currentData.Amount) && math.Signbit(currentData.LastAmount) && !math.Signbit(currentData.Oq) {
-					return
-				} else if !math.Signbit(currentData.Amount) && !math.Signbit(currentData.LastAmount) && math.Signbit(currentData.Oq) {
-					return
-				}
+			// 如果用户此时无仓位，正常应该是和交易员同步的，交易员反向交易仍未穿仓，部分平仓，则选择不开
+			if floatEqual(userPositionAmount, 0, 1e-7) && bothPartClose {
+				return
 			}
 
 			if 0 < s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantoMultiplier {
@@ -1105,7 +1102,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			return
 		}
 
-		if "CLOSE" == currentData.Status { // 完全平仓
+		if "CLOSE" == closeStatus { // 完全平仓
 			// 认为是0
 			if lessThanOrEqualZero(userPositionAmount, 1e-7) {
 				return
@@ -1180,7 +1177,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			return
 		}
 
-		if "CLOSE" == currentData.Status { // 完全平仓
+		if "CLOSE" == closeStatus { // 完全平仓
 			// 认为是0
 			if lessThanOrEqualZero(userPositionAmount, 1e-7) {
 				return
@@ -1263,9 +1260,22 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 		)
 
 		if "BOTH" == currentData.PositionSide {
+			// 检测一下，是否是both部分平仓时不要穿仓，正常的反向开仓不处理
+			if bothPartClose {
+				// 仓位数量小于净平仓数量，肯定要全平了保证不穿仓
+				if lessThanOrEqualZero(math.Abs(userPositionAmount)-math.Abs(tmpExecutedQtyGate), 1e-7) {
+					closeStatus = "CLOSE"
+					reduceOnly = true
+					closeGate = true
+					quantityInt64Gate = 0
+					quantityFloatGate = 0
+					tmpExecutedQtyGate = -userPositionAmount // 反向 正负保持
+				}
+			}
+
 			gateRes, err = service.Gate().PlaceBothOrderGate(user.ApiKey, user.ApiSecret, symbolGate, quantityInt64Gate, reduceOnly, closeGate)
 			if nil != err || 0 >= gateRes.Id {
-				log.Println("OrderAtPlat，Gate下单:", user, currentData, gateRes, reduceOnly, closePosition, quantityInt64Gate, symbolGate)
+				log.Println("OrderAtPlat，Gate下单:", user, currentData, gateRes, reduceOnly, closePosition, quantityInt64Gate, symbolGate, closeStatus)
 				return
 			}
 
@@ -1274,7 +1284,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				// 追加仓位，开仓
 				s.OrderMap.Set(currentData.Symbol+"&"+positionSide+"&"+strUserId, tmpExecutedQtyGate)
 			} else {
-				if "CLOSE" == currentData.Status {
+				if "CLOSE" == closeStatus {
 					tmpExecutedQtyGate = 0
 				} else {
 					tmpExecutedQtyGate = userPositionAmount + tmpExecutedQtyGate
@@ -1335,12 +1345,13 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 	} else if "binance" == user.Plat {
 		// 精度调整
 		var (
-			quantity      string
-			quantityFloat float64
-			err           error
-			side          = currentData.Side
-			orderType     = "MARKET"
-			positionSide  = currentData.PositionSide
+			quantity       string
+			quantityFloat  float64
+			err            error
+			side           = currentData.Side
+			orderType      = "MARKET"
+			positionSide   = currentData.PositionSide
+			tmpExecutedQty float64 // 结果有正负both 其他持仓仓位模式正
 		)
 		if 0 >= s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantityPrecision {
 			quantity = fmt.Sprintf("%d", int64(currentAmount))
@@ -1356,6 +1367,38 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 
 		if lessThanOrEqualZero(quantityFloat, 1e-7) {
 			return
+		}
+		tmpExecutedQty = quantityFloat
+
+		if bothPartClose {
+			if lessThanOrEqualZero(math.Abs(userPositionAmount)-math.Abs(tmpExecutedQty), 1e-7) {
+				currentAmount = math.Abs(userPositionAmount) // 本次开单数量，转换为正数
+
+				// 认为是0
+				if lessThanOrEqualZero(currentAmount, 1e-7) {
+					return
+				}
+
+				if 0 >= s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantityPrecision {
+					quantity = fmt.Sprintf("%d", int64(currentAmount))
+				} else {
+					quantity = strconv.FormatFloat(currentAmount, 'f', s.SymbolsMap.Get(symbolMapKey).(*entity.LhCoinSymbol).QuantityPrecision, 64)
+				}
+
+				quantityFloat, err = strconv.ParseFloat(quantity, 64)
+				if nil != err {
+					log.Println("OrderAtPlat，数量解析:", user, currentData, s.UsersPositionSide.Get(doValue.UserId), quantity)
+					return
+				}
+
+				if lessThanOrEqualZero(quantityFloat, 1e-7) {
+					return
+				}
+
+				tmpExecutedQty = quantityFloat
+				reduceOnlyBinance = true
+				closeStatus = "CLOSE"
+			}
 		}
 
 		// 下单，不用计算数量，新仓位
@@ -1391,8 +1434,6 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 			return // 返回
 		}
 
-		var tmpExecutedQty float64 // 结果有正负both 其他持仓仓位模式正
-		tmpExecutedQty = quantityFloat
 		if "BOTH" == positionSide && "SELL" == side {
 			tmpExecutedQty = -tmpExecutedQty
 		}
@@ -1431,7 +1472,7 @@ func (s *sListenAndOrder) OrderAtPlat(ctx context.Context, doValue *entity.DoVal
 				}
 
 			} else if "BOTH" == positionSide {
-				if "CLOSE" == currentData.Status {
+				if "CLOSE" == closeStatus {
 					tmpExecutedQty = 0
 				} else {
 					tmpExecutedQty = userPositionAmount + tmpExecutedQty

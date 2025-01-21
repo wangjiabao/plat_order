@@ -127,9 +127,9 @@ var (
 					var (
 						parseErr error
 						setCode  uint64
-						num      float64
+						num      uint64
 					)
-					num, parseErr = strconv.ParseFloat(r.PostFormValue("num"), 64)
+					num, parseErr = strconv.ParseUint(r.PostFormValue("num"), 10, 64)
 					if nil != parseErr || 0 >= num {
 						r.Response.WriteJson(g.Map{
 							"code": -1,

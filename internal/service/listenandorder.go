@@ -31,7 +31,7 @@ type (
 		// SetSystemUserNum set user num
 		SetSystemUserNum(ctx context.Context, apiKey string, num float64) error
 		// SetApiStatus set user api status
-		SetApiStatus(ctx context.Context, apiKey string, num float64) uint64
+		SetApiStatus(ctx context.Context, apiKey string, num uint64) uint64
 		// SetUseNewSystem set user num
 		SetUseNewSystem(ctx context.Context, apiKey string, useNewSystem uint64) error
 		// GetSystemUserPositions get user positions

@@ -1862,7 +1862,7 @@ func (s *sListenAndOrder) SetSystemUserNum(ctx context.Context, apiKey string, n
 }
 
 // SetApiStatus set user api status
-func (s *sListenAndOrder) SetApiStatus(ctx context.Context, apiKey string, num float64) uint64 {
+func (s *sListenAndOrder) SetApiStatus(ctx context.Context, apiKey string, num uint64) uint64 {
 	var (
 		err   error
 		users []*entity.User

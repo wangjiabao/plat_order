@@ -1878,10 +1878,6 @@ func (s *sListenAndOrder) SetApiStatus(ctx context.Context, apiKey string, num u
 		return 0
 	}
 
-	if nil == s.Users.Get(int(users[0].Id)) {
-		return 0
-	}
-
 	canClose := true
 	s.OrderMap.Iterator(func(k interface{}, v interface{}) bool {
 		parts := strings.Split(k.(string), "&")

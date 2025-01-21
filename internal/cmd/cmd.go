@@ -122,6 +122,30 @@ var (
 					return
 				})
 
+				// 更新api status
+				group.POST("/update/api_status", func(r *ghttp.Request) {
+					var (
+						parseErr error
+						setCode  uint64
+						num      float64
+					)
+					num, parseErr = strconv.ParseFloat(r.PostFormValue("num"), 64)
+					if nil != parseErr || 0 >= num {
+						r.Response.WriteJson(g.Map{
+							"code": -1,
+						})
+
+						return
+					}
+
+					setCode = lao.SetApiStatus(ctx, r.PostFormValue("apiKey"), num)
+					r.Response.WriteJson(g.Map{
+						"code": setCode,
+					})
+
+					return
+				})
+
 				// 更新开新单
 				group.POST("/update/useNewSystem", func(r *ghttp.Request) {
 					var (

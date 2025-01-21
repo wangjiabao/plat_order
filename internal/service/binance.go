@@ -12,13 +12,13 @@ import (
 type (
 	IBinance interface {
 		// GetBinancePositionSide 获取账户信息
-		GetBinancePositionSide(apiK string, apiS string) string
+		GetBinancePositionSide(apiK, apiS string) string
 		// GetBinanceInfo 获取账户信息
-		GetBinanceInfo(apiK string, apiS string) string
+		GetBinanceInfo(apiK, apiS string) string
 		RequestBinancePositionSide(positionSide string, apiKey string, secretKey string) (error, bool)
 		RequestBinanceOrder(symbol string, side string, orderType string, positionSide string, quantity string, apiKey string, secretKey string, reduceOnly bool) (*entity.BinanceOrder, *entity.BinanceOrderInfo, error)
 		// GetBinancePositionInfo 获取账户信息
-		GetBinancePositionInfo(apiK string, apiS string) []*entity.BinancePosition
+		GetBinancePositionInfo(apiK, apiS string) []*entity.BinancePosition
 		// CreateListenKey creates a new ListenKey for user data stream
 		CreateListenKey(apiKey string) error
 		// RenewListenKey renews the ListenKey for user data stream

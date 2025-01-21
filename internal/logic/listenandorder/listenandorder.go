@@ -1861,6 +1861,68 @@ func (s *sListenAndOrder) SetSystemUserNum(ctx context.Context, apiKey string, n
 	return nil
 }
 
+// SetApiStatus set user api status
+func (s *sListenAndOrder) SetApiStatus(ctx context.Context, apiKey string, num float64) uint64 {
+	var (
+		err   error
+		users []*entity.User
+	)
+
+	err = g.Model("user").Where("api_key=?", apiKey).Ctx(ctx).Scan(&users)
+	if nil != err {
+		log.Println("查看用户仓位，数据库查询错误：", err)
+		return 0
+	}
+
+	if 0 >= len(users) || 0 >= users[0].Id {
+		return 0
+	}
+
+	if nil == s.Users.Get(int(users[0].Id)) {
+		return 0
+	}
+
+	canClose := true
+	s.OrderMap.Iterator(func(k interface{}, v interface{}) bool {
+		parts := strings.Split(k.(string), "&")
+		if 3 != len(parts) {
+			return true
+		}
+
+		var (
+			uid uint64
+		)
+		uid, err = strconv.ParseUint(parts[2], 10, 64)
+		if nil != err {
+			log.Println("查看用户仓位，解析id错误:", k)
+		}
+
+		if uid != uint64(users[0].Id) {
+			return true
+		}
+
+		amount := v.(float64)
+
+		if !floatEqual(amount, 0, 1e-7) {
+			canClose = false
+		}
+
+		return true
+	})
+
+	if !canClose {
+		return 0
+	}
+
+	_, err = g.Model("user").Ctx(ctx).Data("api_status", num).Where("api_key=?", apiKey).Update()
+	if nil != err {
+		log.Println("更新用户api_status：", err)
+		return 0
+	}
+
+	return 1
+}
+
 // SetUseNewSystem set user num
 func (s *sListenAndOrder) SetUseNewSystem(ctx context.Context, apiKey string, useNewSystem uint64) error {
 	var (

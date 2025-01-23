@@ -158,6 +158,112 @@ func (s *sBinance) GetBinancePositionSide(apiK, apiS string) string {
 	return res
 }
 
+// GetLatestPrice 获取价格
+func (s *sBinance) GetLatestPrice(symbol string) string {
+	baseURL := "https://api.binance.com/api/v3/ticker/price"
+	query := url.Values{}
+	query.Add("symbol", symbol)
+
+	// 构建请求 URL
+	requestURL := baseURL + "?" + query.Encode()
+	resp, err := http.Get(requestURL)
+	if err != nil {
+		log.Println("获取价格错误：", err)
+	}
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			log.Println("获取价格错误：", err)
+		}
+	}(resp.Body)
+
+	// 读取响应数据
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("获取价格错误：", err)
+	}
+
+	// 解析 JSON 响应
+	var data *entity.LatestPrice
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Println("获取价格错误：", err)
+	}
+
+	return data.Price
+}
+
+// GetWalletInfo 获取钱包信息
+func (s *sBinance) GetWalletInfo(apiK, apiS string) []*entity.WalletInfo {
+	// 请求的API地址
+	endpoint := "/sapi/v1/asset/wallet/balance"
+	baseURL := "https://api.binance.com"
+
+	res := make([]*entity.WalletInfo, 0)
+	// 获取当前时间戳（使用服务器时间避免时差问题）
+	serverTime := getBinanceServerTime()
+	if serverTime == 0 {
+		return res
+	}
+	timestamp := strconv.FormatInt(serverTime, 10)
+
+	// 设置请求参数
+	params := url.Values{}
+	params.Set("timestamp", timestamp)
+	params.Set("recvWindow", "5000") // 设置接收窗口
+
+	// 生成签名
+	signature := generateSignature(apiS, params)
+
+	// 将签名添加到请求参数中
+	params.Set("signature", signature)
+
+	// 构建完整的请求URL
+	requestURL := baseURL + endpoint + "?" + params.Encode()
+
+	// 创建请求
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		log.Println("Error creating request:", err)
+		return res
+	}
+
+	// 添加请求头
+	req.Header.Add("X-MBX-APIKEY", apiK)
+
+	// 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request:", err)
+		return res
+	}
+
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
+
+	// 读取响应
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading response:", err)
+		return res
+	}
+
+	// 解析响应\
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		log.Println("Error unmarshalling response:", err)
+		return res
+	}
+
+	// 返回资产余额
+	return res
+}
+
 // GetBinanceInfo 获取账户信息
 func (s *sBinance) GetBinanceInfo(apiK, apiS string) string {
 	// 请求的API地址

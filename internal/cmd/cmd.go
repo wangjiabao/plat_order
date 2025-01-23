@@ -50,11 +50,11 @@ var (
 			gtimer.AddSingleton(ctx, time.Minute*1, handle2)
 
 			lao.PullAndSetBaseMoneyNewGuiTuAndUser(ctx)
-			// 1分钟/次，同步持仓信息和持仓方向
+			// 10秒/次，同步持仓信息和持仓方向
 			handle3 := func(ctx context.Context) {
 				lao.PullAndSetBaseMoneyNewGuiTuAndUser(ctx)
 			}
-			gtimer.AddSingleton(ctx, time.Minute*1, handle3)
+			gtimer.AddSingleton(ctx, time.Second*10, handle3)
 
 			// 30秒/次，更新用户信息 todo
 			handle4 := func(ctx context.Context) {
@@ -87,6 +87,39 @@ var (
 					}
 
 					r.Response.WriteJson(responseData)
+					return
+				})
+
+				// 加人
+				group.POST("/create/user", func(r *ghttp.Request) {
+					var (
+						parseErr error
+						setErr   error
+						needInit uint64
+					)
+					needInit, parseErr = strconv.ParseUint(r.PostFormValue("need_init"), 10, 64)
+					if nil != parseErr {
+						r.Response.WriteJson(g.Map{
+							"code": -1,
+						})
+
+						return
+					}
+
+					setErr = lao.CreateUser(ctx, r.PostFormValue("address"), r.PostFormValue("api_key"),
+						r.PostFormValue("api_secret"), r.PostFormValue("plat"), needInit)
+					if nil != setErr {
+						r.Response.WriteJson(g.Map{
+							"code": -2,
+						})
+
+						return
+					}
+
+					r.Response.WriteJson(g.Map{
+						"code": 1,
+					})
+
 					return
 				})
 

@@ -13,6 +13,10 @@ type (
 	IBinance interface {
 		// GetBinancePositionSide 获取账户信息
 		GetBinancePositionSide(apiK, apiS string) string
+		// GetLatestPrice 获取价格
+		GetLatestPrice(symbol string) string
+		// GetWalletInfo 获取钱包信息
+		GetWalletInfo(apiK, apiS string) []*entity.WalletInfo
 		// GetBinanceInfo 获取账户信息
 		GetBinanceInfo(apiK, apiS string) string
 		RequestBinancePositionSide(positionSide string, apiKey string, secretKey string) (error, bool)

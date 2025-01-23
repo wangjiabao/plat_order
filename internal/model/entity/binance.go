@@ -24,6 +24,18 @@ type Asset struct {
 	TotalMarginBalance string `json:"totalMarginBalance"` // 资产余额
 }
 
+type LatestPrice struct {
+	Symbol string `json:"symbol"`
+	Price  string `json:"price"`
+}
+
+// WalletInfo 表示单个钱包信息
+type WalletInfo struct {
+	Activate   bool   `json:"activate"`   // 是否激活
+	Balance    string `json:"balance"`    // 余额（字符串形式）
+	WalletName string `json:"walletName"` // 钱包名称
+}
+
 // PositionSide 代表单个资产的保证金信息
 type PositionSide struct {
 	DalSidePosition bool `json:"dualSidePosition"` // 资产余额

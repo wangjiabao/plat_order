@@ -3,17 +3,20 @@ package listenandorder
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gateio/gateapi-go/v6"
 	"github.com/gogf/gf/v2/container/gmap"
 	"github.com/gogf/gf/v2/container/gtype"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/grpool"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/os/gtimer"
 	"github.com/gorilla/websocket"
 	"log"
 	"math"
 	"plat_order/internal/logic/binance"
+	"plat_order/internal/model/do"
 	"plat_order/internal/model/entity"
 	"plat_order/internal/service"
 	"strconv"
@@ -109,23 +112,62 @@ func (s *sListenAndOrder) SetSymbol(ctx context.Context) (err error) {
 // PullAndSetBaseMoneyNewGuiTuAndUser 拉取binance保证金数据
 func (s *sListenAndOrder) PullAndSetBaseMoneyNewGuiTuAndUser(ctx context.Context) {
 	var (
-		err error
-		one string
+		err         error
+		walletInfo  []*entity.WalletInfo
+		btcPriceStr string
+		btcPriceF   float64
 	)
 
-	one = service.Binance().GetBinanceInfo(s.TraderInfo.apiKey, s.TraderInfo.apiSecret)
-	if 0 < len(one) {
-		var tmp float64
-		tmp, err = strconv.ParseFloat(one, 64)
-		if nil != err {
-			log.Println("拉取保证金，转化失败：", err)
+	btcPriceStr = service.Binance().GetLatestPrice("BTCUSDT")
+	btcPriceF, err = strconv.ParseFloat(btcPriceStr, 64)
+	if nil != err {
+		log.Println(err)
+	}
+
+	if !lessThanOrEqualZero(btcPriceF, 1e-7) {
+
+		var allWalletAmount float64
+		walletInfo = service.Binance().GetWalletInfo(s.TraderInfo.apiKey, s.TraderInfo.apiSecret)
+		for _, vWalletInfo := range walletInfo {
+			var tmpBalanceF float64
+			tmpBalanceF, err = strconv.ParseFloat(vWalletInfo.Balance, 64)
+			if nil != err {
+				allWalletAmount = 0
+				log.Println(err)
+				break
+			}
+
+			if lessThanOrEqualZero(tmpBalanceF, 1e-7) {
+				continue
+			}
+
+			allWalletAmount += tmpBalanceF * btcPriceF
 		}
 
-		if !floatEqual(tmp, s.TraderMoney.Val(), 10) {
-			//log.Println("龟兔，变更保证金", tmp, baseMoneyGuiTu.Val())
-			s.TraderMoney.Set(tmp)
+		if !lessThanOrEqualZero(allWalletAmount, 1e-7) {
+			if !floatEqual(allWalletAmount, s.TraderMoney.Val(), 100) {
+				//log.Println("龟兔，变更保证金", tmp, baseMoneyGuiTu.Val())
+				log.Println("总资产预估测试usdt:", allWalletAmount)
+				s.TraderMoney.Set(allWalletAmount)
+			}
+		} else {
+			log.Println("总资产为 0 usdt:", allWalletAmount)
 		}
 	}
+
+	//one = service.Binance().GetBinanceInfo(s.TraderInfo.apiKey, s.TraderInfo.apiSecret)
+	//if 0 < len(one) {
+	//	var tmp float64
+	//	tmp, err = strconv.ParseFloat(one, 64)
+	//	if nil != err {
+	//		log.Println("拉取保证金，转化失败：", err)
+	//	}
+	//
+	//	if !floatEqual(tmp, s.TraderMoney.Val(), 10) {
+	//		//log.Println("龟兔，变更保证金", tmp, baseMoneyGuiTu.Val())
+	//		s.TraderMoney.Set(tmp)
+	//	}
+	//}
 
 	time.Sleep(300 * time.Millisecond)
 
@@ -1845,6 +1887,47 @@ func (s *sListenAndOrder) GetSystemUserNum(ctx context.Context) map[string]float
 	}
 
 	return res
+}
+
+// CreateUser set user num
+func (s *sListenAndOrder) CreateUser(ctx context.Context, address, apiKey, apiSecret, plat string, needInit uint64) error {
+	var (
+		users []*entity.User
+		err   error
+	)
+	apiStatusOk := make([]uint64, 0)
+	apiStatusOk = append(apiStatusOk, 1, 3)
+
+	err = g.Model("user").WhereIn("api_status", apiStatusOk).Ctx(ctx).Scan(&users)
+	if nil != err {
+		log.Println("CreateUser，数据库查询错误：", err)
+		return err
+	}
+
+	if 35 <= len(users) {
+		return errors.New("超人数")
+	}
+
+	_, err = g.Model("user").Ctx(ctx).Insert(&do.User{
+		Address:    address,
+		ApiStatus:  1,
+		ApiKey:     apiKey,
+		ApiSecret:  apiSecret,
+		OpenStatus: 2,
+		CreatedAt:  gtime.Now(),
+		UpdatedAt:  gtime.Now(),
+		NeedInit:   needInit,
+		Num:        1,
+		Plat:       plat,
+		Dai:        0,
+		Ip:         1,
+	})
+
+	if nil != err {
+		log.Println("新增用户失败：", err)
+		return err
+	}
+	return nil
 }
 
 // SetSystemUserNum set user num

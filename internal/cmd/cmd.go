@@ -50,11 +50,11 @@ var (
 			gtimer.AddSingleton(ctx, time.Minute*1, handle2)
 
 			lao.PullAndSetBaseMoneyNewGuiTuAndUser(ctx)
-			// 10秒/次，同步持仓信息和持仓方向
+			// 1分钟/次，同步持仓信息和持仓方向
 			handle3 := func(ctx context.Context) {
 				lao.PullAndSetBaseMoneyNewGuiTuAndUser(ctx)
 			}
-			gtimer.AddSingleton(ctx, time.Second*10, handle3)
+			gtimer.AddSingleton(ctx, time.Minute*1, handle3)
 
 			// 30秒/次，更新用户信息 todo
 			handle4 := func(ctx context.Context) {

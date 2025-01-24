@@ -399,6 +399,7 @@ func (s *sBinance) RequestBinancePositionSide(positionSide string, apiKey string
 		return nil, true
 	}
 
+	log.Println(string(b), err)
 	return nil, false
 }
 

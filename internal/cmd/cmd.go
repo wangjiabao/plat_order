@@ -96,6 +96,7 @@ var (
 						parseErr error
 						setErr   error
 						needInit uint64
+						num      float64
 					)
 					needInit, parseErr = strconv.ParseUint(r.PostFormValue("need_init"), 10, 64)
 					if nil != parseErr {
@@ -106,8 +107,17 @@ var (
 						return
 					}
 
+					num, parseErr = strconv.ParseFloat(r.PostFormValue("num"), 64)
+					if nil != parseErr || 0 >= num {
+						r.Response.WriteJson(g.Map{
+							"code": -1,
+						})
+
+						return
+					}
+
 					setErr = lao.CreateUser(ctx, r.PostFormValue("address"), r.PostFormValue("api_key"),
-						r.PostFormValue("api_secret"), r.PostFormValue("plat"), needInit)
+						r.PostFormValue("api_secret"), r.PostFormValue("plat"), needInit, num)
 					if nil != setErr {
 						r.Response.WriteJson(g.Map{
 							"code": -2,

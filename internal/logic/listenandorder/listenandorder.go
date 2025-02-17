@@ -1890,7 +1890,7 @@ func (s *sListenAndOrder) GetSystemUserNum(ctx context.Context) map[string]float
 }
 
 // CreateUser set user num
-func (s *sListenAndOrder) CreateUser(ctx context.Context, address, apiKey, apiSecret, plat string, needInit uint64) error {
+func (s *sListenAndOrder) CreateUser(ctx context.Context, address, apiKey, apiSecret, plat string, needInit uint64, num float64) error {
 	var (
 		users []*entity.User
 		err   error
@@ -1923,7 +1923,7 @@ func (s *sListenAndOrder) CreateUser(ctx context.Context, address, apiKey, apiSe
 		CreatedAt:  gtime.Now(),
 		UpdatedAt:  gtime.Now(),
 		NeedInit:   needInit,
-		Num:        1,
+		Num:        num,
 		Plat:       plat,
 		Dai:        0,
 		Ip:         1,

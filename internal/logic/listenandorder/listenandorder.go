@@ -1908,6 +1908,12 @@ func (s *sListenAndOrder) CreateUser(ctx context.Context, address, apiKey, apiSe
 		return errors.New("超人数")
 	}
 
+	for _, vUsers := range users {
+		if apiKey == vUsers.ApiKey {
+			return errors.New("已存在")
+		}
+	}
+
 	_, err = g.Model("user").Ctx(ctx).Insert(&do.User{
 		Address:    address,
 		ApiStatus:  1,
